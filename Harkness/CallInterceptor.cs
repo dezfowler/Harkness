@@ -2,7 +2,7 @@
 
 namespace Harkness
 {
-    class CallInterceptor : IMethodMissing
+    public class CallInterceptor : IMethodMissing
     {
         private readonly object subject;
 

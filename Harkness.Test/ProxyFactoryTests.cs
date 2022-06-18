@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Harkness.Test
@@ -97,6 +98,8 @@ namespace Harkness.Test
     public interface ITestService
     {
         int SomeMethod(string words, int num);
+
+        Task<int> SomeMethodAsync(string words, int num);
 
         void NoReturn(string blah);
 

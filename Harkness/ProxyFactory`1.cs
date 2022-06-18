@@ -9,7 +9,7 @@ namespace Harkness
         public static T Make(IMethodMissing methodMissing)
         {
             var proxy = new Proxy();
-            proxy.InvokeFunc = methodMissing.Invoke;            
+            proxy.InvokeFunc = methodMissing.Invoke;
             return (T)proxy.GetTransparentProxy();
         }
 
