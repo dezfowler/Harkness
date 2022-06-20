@@ -42,11 +42,6 @@ namespace Harkness
                 return InvokeFunc(targetMethod, args);
             }
         }
-#endif        
-    }
-
-    public interface IMethodMissing
-    {
-        object Invoke(MethodBase targetMethod, object[] args);
+#endif
     }
 }

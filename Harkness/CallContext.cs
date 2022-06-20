@@ -20,8 +20,4 @@ namespace Harkness
             return top;
         }
     }
-
-    public class EmptyContext : CallContext
-    {
-    }
 }
