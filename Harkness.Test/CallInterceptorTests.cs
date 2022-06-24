@@ -14,7 +14,7 @@ namespace Harkness.Test
             var mock = Mock.Of<ISomeType>();
             Mock.Get(mock).Setup(m => m.CallMe(5)).Returns("called!");
 
-            var interceptor = new CallInterceptor(mock);
+            var interceptor = new ProxiedObjectCaller(mock);
             var proxy = ProxyFactory<ISomeType>.Make(interceptor);
             var result = proxy.CallMe(5);
 
