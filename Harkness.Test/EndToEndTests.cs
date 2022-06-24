@@ -12,7 +12,7 @@ namespace Harkness.Test
         {
             var session = new Session();
             var provider = new DateTimeProvider();
-            var proxy = session.MakeProxy<IDateTimeProvider>(provider);
+            var proxy = session.RootScope.MakeProxy<IDateTimeProvider>(provider);
             
             session.Mode = Mode.Record;
             var realValue = proxy.GetUtcNow();
@@ -28,7 +28,7 @@ namespace Harkness.Test
         {
             var session = new Session();
             var provider = new DateTimeProvider();
-            var proxy = session.MakeProxy<IDateTimeProvider>(provider);
+            var proxy = session.RootScope.MakeProxy<IDateTimeProvider>(provider);
             
             session.Mode = Mode.Record;
             var realValue1 = proxy.GetUtcNow();
@@ -37,6 +37,45 @@ namespace Harkness.Test
             session.Mode = Mode.Replay;
             var recordedValue1 = proxy.GetUtcNow();
             var recordedValue2 = proxy.GetUtcNow();
+
+            Assert.Equal(realValue1, recordedValue1);
+            Assert.Equal(realValue2, recordedValue2);
+        }
+
+        [Fact]
+        public void EndToEnd_WhenMultipleScopedCalls_ThenReturnsInScope()
+        {
+            var session = new Session();
+            var provider = new DateTimeProvider();            
+            
+            session.Mode = Mode.Record;
+            DateTime realValue1, realValue2;
+
+            using (var scope = session.BeginScope("Test1"))
+            {
+                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                realValue1 = proxy.GetUtcNow();
+            }
+            
+            using (var scope = session.BeginScope("Test2"))
+            {
+                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                realValue2 = proxy.GetUtcNow();
+            }
+
+            session.Mode = Mode.Replay;
+            DateTime recordedValue1, recordedValue2;
+            using (var scope = session.BeginScope("Test1"))
+            {
+                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                recordedValue1 = proxy.GetUtcNow();
+            }
+            
+            using (var scope = session.BeginScope("Test2"))
+            {
+                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                recordedValue2 = proxy.GetUtcNow();
+            }
 
             Assert.Equal(realValue1, recordedValue1);
             Assert.Equal(realValue2, recordedValue2);
