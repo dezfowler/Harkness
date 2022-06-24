@@ -18,5 +18,4 @@ namespace Harkness
             return _interceptor.Invoke(targetMethod, args, _fallback.Invoke);
         }
     }
-
 }

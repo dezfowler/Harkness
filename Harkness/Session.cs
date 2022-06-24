@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Harkness
@@ -15,20 +16,24 @@ namespace Harkness
             return ProxyFactory<T>.Make(composite);
         }
 
-        object captured;
+        List<object> captured = new List<object>();
+        int callIndex = 0;
 
         public object Invoke(MethodBase targetMethod, object[] args, Func<MethodBase, object[], object> invokeFallback)
         {
             if (Mode == Mode.Record)
             {
-                captured = invokeFallback(targetMethod, args);
-                return captured;
+                var returnVal = invokeFallback(targetMethod, args);
+                captured.Add(returnVal);
+                return returnVal;
             }
             else if (Mode == Mode.Replay)
             {
-                return captured;
+                var returnVal = captured[callIndex];
+                callIndex++;
+                return returnVal;
             }
-            throw new Exception("Badd");
+            throw new Exception("Bad");
         }
     }
 
