@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Harkness
 {
@@ -8,15 +11,16 @@ namespace Harkness
     {
         public Session()
         {
-            RootScope = new Scope(this, null);
+            Reset();
         }
 
-        public Mode Mode { get; internal set; }
+        public Mode Mode { get; set; }
 
-        public IScope RootScope { get; set; }
+        public Speed ReplaySpeed { get; set; }
 
-        List<object> captured = new List<object>();
-        int callIndex = 0;
+        private IScope RootScope { get; set; }
+
+        private Dictionary<string, List<CapturedResult>> Store { get; set; } = new Dictionary<string, List<CapturedResult>>();
 
         public object Invoke(
             MethodBase targetMethod, 
@@ -24,54 +28,56 @@ namespace Harkness
             Func<MethodBase, object[], object> invokeFallback, 
             IScope scope)
         {
-
+            var signature = MethodSignature.FromMethodBase(targetMethod);
+            var methodCall = MethodCallEvent.Create(signature, args);
             if (Mode == Mode.Record)
             {
                 var returnVal = invokeFallback(targetMethod, args);
-                captured.Add(returnVal);
+                var result = CapturedResult.Capture(methodCall, returnVal);
+                scope.SaveCapturedResult(result);
                 return returnVal;
             }
             else if (Mode == Mode.Replay)
             {
-                var returnVal = captured[callIndex];
-                callIndex++;
-                return returnVal;
+                var capturedResult = scope.GetCapturedResult(methodCall);
+                if (capturedResult == null) throw new Exception("No matching call found");
+                return capturedResult.ReturnVal;
             }
 
             throw new Exception("Bad");
         }
 
+        public List<CapturedResult> LoadCallsForScope(Scope scope)
+        {
+            if(Mode == Mode.Record) return new List<CapturedResult>();
+            Store.TryGetValue(scope.Name.GetName(), out List<CapturedResult> saved);
+            return saved ?? new List<CapturedResult>();
+        }
+
+        public void SaveCallsForScope(Scope scope, List<CapturedResult> calls)
+        {
+            if(Mode != Mode.Record) return;
+
+            Store[scope.Name.GetName()] = calls;
+        }
+
         public IScope BeginScope(string scopeName)
         {
-            return new Scope(this, this.RootScope);
+            return new Scope(this, this.RootScope, new StringName(scopeName));
+        }
+
+        private void Reset()
+        {
+            RootScope = new Scope(this, null, new StringName("Root"));
         }
     }
 
-    public interface IScope : IDisposable
+    public enum Speed
     {
-        T MakeProxy<T>(T proxied);
-    }
-
-    public class Scope : IScope
-    {
-        private Session _session;
-        private IScope _parentScope;
-
-        public Scope(Session session, IScope parentScope)
-        {
-            _session = session;
-            _parentScope = parentScope;
-        }
-
-        public void Dispose()
-        {
-        }
-
-        public T MakeProxy<T>(T proxied)
-        {
-            var fallback = new ProxiedObjectCaller(proxied);
-            var composite = new CallInterceptorComposite(fallback, _session, this);
-            return ProxyFactory<T>.Make(composite);
-        }
+        Instant = 0,
+        RealTime = 1,
+        TwoTimes = 2,
+        FiveTimes = 5,
+        TenTimes = 10,
     }
 }

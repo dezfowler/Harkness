@@ -7,4 +7,8 @@
     <PackageProjectUrl>https://github.com/dezfowler/Harkness</PackageProjectUrl>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
 </Project>
