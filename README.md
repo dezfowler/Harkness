@@ -1,4 +1,5 @@
 
 # Harkness
-Harkness is a testing framework for isolating a SUT from out-of-process or non-deterministic dependencies.
+
+Harkness is a record/replay testing framework for isolating a system under test (SUT) from external or non-deterministic dependencies.
 
