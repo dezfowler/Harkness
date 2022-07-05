@@ -2,11 +2,11 @@ using System.Collections.Generic;
 
 namespace Harkness
 {
-    public class Scope : IScope
+    public class Scenario : IScenario
     {
         private Session _session;
 
-        public Scope(Session session, IScope parentScope, IName name)
+        public Scenario(Session session, IScope parentScope, IName name)
         {
             _session = session;
             ParentScope = parentScope;
@@ -24,6 +24,14 @@ namespace Harkness
 
         public void Dispose()
         {
+            _session.SaveCallsForScope(this, Calls);
+        }
+
+        public T MakeProxy<T>(T proxied)
+        {
+            var fallback = new ProxiedObjectCaller(proxied);
+            var composite = new CallInterceptorComposite(fallback, _session, this);
+            return ProxyFactory<T>.Make(composite);
         }
 
         public CapturedResult GetCapturedResult(MethodCallEvent methodCall)
@@ -37,14 +45,16 @@ namespace Harkness
             return Calls.Find(result => result.MethodCall.Equals(methodCall) && result.Occurrence == calls);
         }
 
-        public IScope BeginScope(IName scopeName)
+        public void SaveCapturedResult(CapturedResult result)
         {
-            return new Scope(this._session, this, scopeName);
-        }
-
-        public IScenario BeginScenario(IName scenarioName)
-        {
-            return new Scenario(this._session, this, scenarioName);
+            if (!CallCount.TryGetValue(result.MethodCall, out int calls))
+            {
+                calls = 0;
+            }
+            calls++;
+            CallCount[result.MethodCall] = calls;
+            result.Occurrence = calls;
+            Calls.Add(result);
         }
     }
 }

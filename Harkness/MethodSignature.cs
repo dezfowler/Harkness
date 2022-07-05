@@ -11,7 +11,7 @@ namespace Harkness
         public Type[] ParameterTypes { get; set; }
         public Type ReturnType { get; set; }
 
-        public static MethodSignature FromMethodBase(MethodBase targetMethod)
+        public static MethodSignature Create(MethodBase targetMethod)
         {
             var methodInfo = (MethodInfo)targetMethod;
             

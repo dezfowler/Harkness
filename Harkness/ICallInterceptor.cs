@@ -9,7 +9,7 @@ namespace Harkness
             MethodBase targetMethod, 
             object[] args, 
             Func<MethodBase, object[], object> invokeFallback,
-            IScope scope);
+            IScenario scenario);
     }
 
 }

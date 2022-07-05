@@ -26,20 +26,20 @@ namespace Harkness
             MethodBase targetMethod, 
             object[] args, 
             Func<MethodBase, object[], object> invokeFallback, 
-            IScope scope)
+            IScenario scenario)
         {
-            var signature = MethodSignature.FromMethodBase(targetMethod);
+            var signature = MethodSignature.Create(targetMethod);
             var methodCall = MethodCallEvent.Create(signature, args);
             if (Mode == Mode.Record)
             {
                 var returnVal = invokeFallback(targetMethod, args);
                 var result = CapturedResult.Capture(methodCall, returnVal);
-                scope.SaveCapturedResult(result);
+                scenario.SaveCapturedResult(result);
                 return returnVal;
             }
             else if (Mode == Mode.Replay)
             {
-                var capturedResult = scope.GetCapturedResult(methodCall);
+                var capturedResult = scenario.GetCapturedResult(methodCall);
                 if (capturedResult == null) throw new Exception("No matching call found");
                 return capturedResult.ReturnVal;
             }
@@ -47,23 +47,28 @@ namespace Harkness
             throw new Exception("Bad");
         }
 
-        public List<CapturedResult> LoadCallsForScope(Scope scope)
+        public List<CapturedResult> LoadCallsForScope(IScoped scope)
         {
             if(Mode == Mode.Record) return new List<CapturedResult>();
             Store.TryGetValue(scope.Name.GetName(), out List<CapturedResult> saved);
             return saved ?? new List<CapturedResult>();
         }
 
-        public void SaveCallsForScope(Scope scope, List<CapturedResult> calls)
+        public void SaveCallsForScope(IScoped scope, List<CapturedResult> calls)
         {
             if(Mode != Mode.Record) return;
 
             Store[scope.Name.GetName()] = calls;
         }
 
-        public IScope BeginScope(string scopeName)
+        public IScope BeginScope(IName scopeName)
         {
-            return new Scope(this, this.RootScope, new StringName(scopeName));
+            return new Scope(this, this.RootScope, scopeName);
+        }
+
+        public IScenario BeginScenario(IName scenarioName)
+        {
+            return new Scenario(this, this.RootScope, scenarioName);
         }
 
         private void Reset()

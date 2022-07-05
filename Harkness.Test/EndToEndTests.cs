@@ -16,17 +16,17 @@ namespace Harkness.Test
             session.Mode = Mode.Record;
 
             DateTime realValue, recordedValue;
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 realValue = proxy.GetUtcNow();
             }
 
             session.Mode = Mode.Replay;
 
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 recordedValue = proxy.GetUtcNow();
             }
 
@@ -42,17 +42,17 @@ namespace Harkness.Test
             DateTime realValue1, realValue2, recordedValue1, recordedValue2;
 
             session.Mode = Mode.Record;
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 realValue1 = proxy.GetUtcNow();
                 realValue2 = proxy.GetUtcNow();
             }
 
             session.Mode = Mode.Replay;
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 recordedValue1 = proxy.GetUtcNow();
                 recordedValue2 = proxy.GetUtcNow();
             }
@@ -70,30 +70,30 @@ namespace Harkness.Test
             session.Mode = Mode.Record;
             DateTime realValue1, realValue2;
 
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 realValue1 = proxy.GetUtcNow();
             }
             
-            using (var scope = session.BeginScope("Test2"))
+            using (var scenario = session.BeginScenario(new StringName("Test2")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 realValue2 = proxy.GetUtcNow();
             }
 
             session.Mode = Mode.Replay;
             DateTime recordedValue1, recordedValue2;
             
-            using (var scope = session.BeginScope("Test2"))
+            using (var scenario = session.BeginScenario(new StringName("Test2")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 recordedValue2 = proxy.GetUtcNow();
             }
 
-            using (var scope = session.BeginScope("Test1"))
+            using (var scenario = session.BeginScenario(new StringName("Test1")))
             {
-                var proxy = scope.MakeProxy<IDateTimeProvider>(provider);
+                var proxy = scenario.MakeProxy<IDateTimeProvider>(provider);
                 recordedValue1 = proxy.GetUtcNow();
             }
 
