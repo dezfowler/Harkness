@@ -9,18 +9,11 @@ namespace Harkness
 {
     public class Session : ICallInterceptor
     {
-        public Session()
-        {
-            Reset();
-        }
-
         public Mode Mode { get; set; }
 
         public Speed ReplaySpeed { get; set; }
 
-        private IScope RootScope { get; set; }
-
-        private Dictionary<string, List<CapturedResult>> Store { get; set; } = new Dictionary<string, List<CapturedResult>>();
+        private Dictionary<string, Timeline> Store { get; set; } = new Dictionary<string, Timeline>();
 
         public object Invoke(
             MethodBase targetMethod, 
@@ -28,52 +21,72 @@ namespace Harkness
             Func<MethodBase, object[], object> invokeFallback, 
             IScenario scenario)
         {
-            var signature = MethodSignature.Create(targetMethod);
-            var methodCall = MethodCallEvent.Create(signature, args);
+            MethodCallEvent methodCall = scenario.CreateEvent(targetMethod, args);
+            
             if (Mode == Mode.Record)
             {
+
+                // TODO: Capture all the different types of result here
+                // exception, Task, Stream, Observable, etc
+                // in a way that can be serialized and replayed later
+
                 var returnVal = invokeFallback(targetMethod, args);
-                var result = CapturedResult.Capture(methodCall, returnVal);
-                scenario.SaveCapturedResult(result);
+
+                var result = new CapturedResult 
+                { 
+                    ReturnVal = returnVal, 
+                    Time = scenario.Stopwatch.Elapsed 
+                };
+
+                methodCall.Result = result;
+
+                scenario.SaveCapturedResult(methodCall);
                 return returnVal;
             }
             else if (Mode == Mode.Replay)
             {
-                var capturedResult = scenario.GetCapturedResult(methodCall);
-                if (capturedResult == null) throw new Exception("No matching call found");
-                return capturedResult.ReturnVal;
+                var capturedEvent = scenario.GetCapturedResult(methodCall);
+                
+                if (capturedEvent == null) 
+                {
+                    throw new Exception("No matching call found");
+                }
+
+                // TODO: Add delay dependent on replay speed
+
+                // TODO: Yield different result types:
+                // - bare value
+                // - wrap in Task
+                // - create Stream
+                // - throw exception
+                // - etc
+
+                return capturedEvent.Result.ReturnVal;
             }
 
             throw new Exception("Bad");
         }
 
-        public List<CapturedResult> LoadCallsForScope(IScoped scope)
+        public Timeline LoadTimeline(IName name)
         {
-            if(Mode == Mode.Record) return new List<CapturedResult>();
-            Store.TryGetValue(scope.Name.GetName(), out List<CapturedResult> saved);
-            return saved ?? new List<CapturedResult>();
+            if(Mode == Mode.Record) return new Timeline();
+            Store.TryGetValue(name.GetName(), out Timeline saved);
+            return saved ?? new Timeline();
         }
 
-        public void SaveCallsForScope(IScoped scope, List<CapturedResult> calls)
+        public void SaveTimeline(IName name, Timeline timeline)
         {
             if(Mode != Mode.Record) return;
 
-            Store[scope.Name.GetName()] = calls;
-        }
-
-        public IScope BeginScope(IName scopeName)
-        {
-            return new Scope(this, this.RootScope, scopeName);
+            Store[name.GetName()] = timeline;
         }
 
         public IScenario BeginScenario(IName scenarioName)
         {
-            return new Scenario(this, this.RootScope, scenarioName);
-        }
-
-        private void Reset()
-        {
-            RootScope = new Scope(this, null, new StringName("Root"));
+            return new Scenario(this, scenarioName)
+            {
+                Timeline = LoadTimeline(scenarioName)
+            };
         }
     }
 

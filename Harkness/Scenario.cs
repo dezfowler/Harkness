@@ -1,4 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 
 namespace Harkness
 {
@@ -6,25 +10,26 @@ namespace Harkness
     {
         private Session _session;
 
-        public Scenario(Session session, IScope parentScope, IName name)
+        public Scenario(Session session, IName name)
         {
             _session = session;
-            ParentScope = parentScope;
             Name = name;
-            Calls = _session.LoadCallsForScope(this);
+            Stopwatch = Stopwatch.StartNew();
         }
 
         public IName Name { get; }
 
         public IScope ParentScope { get; }
 
-        public List<CapturedResult> Calls { get; set; } = new List<CapturedResult>();
+        public Timeline Timeline { get; set; } = new Timeline();
 
-        public Dictionary<MethodCallEvent, int> CallCount = new Dictionary<MethodCallEvent, int>();
+        public Stopwatch Stopwatch { get; }
+
+        public Dictionary<MethodCall, int> CallCount = new Dictionary<MethodCall, int>();
 
         public void Dispose()
         {
-            _session.SaveCallsForScope(this, Calls);
+            _session.SaveTimeline(this.Name, Timeline);
         }
 
         public T MakeProxy<T>(T proxied)
@@ -34,27 +39,50 @@ namespace Harkness
             return ProxyFactory<T>.Make(composite);
         }
 
-        public CapturedResult GetCapturedResult(MethodCallEvent methodCall)
+        public MethodCallEvent GetCapturedResult(MethodCallEvent methodCall)
         {
+            // TODO: Here or somewhere else we want to recurse 
+            // to check parent scopes for a match too
+            return Timeline.Events
+                .OfType<MethodCallEvent>()
+                .FirstOrDefault(capturedCall => Match(capturedCall, methodCall));
+        }
+
+        private static bool Match(MethodCallEvent left, MethodCallEvent right)
+        {
+            return left.Call.Equals(right.Call) && left.Occurrence == right.Occurrence;
+        }
+
+        public void SaveCapturedResult(MethodCallEvent evt)
+        {
+            Timeline.Events.Add(evt);
+        }
+
+        public MethodCallEvent CreateEvent(MethodBase targetMethod, object[] args)
+        {
+            var signature = MethodSignature.Create(targetMethod);
+
+            var methodCall = new MethodCall
+            {
+                MethodSignature = signature,
+                Args = args,
+            };
+
             if (!CallCount.TryGetValue(methodCall, out int calls))
             {
                 calls = 0;
             }
             calls++;
             CallCount[methodCall] = calls;
-            return Calls.Find(result => result.MethodCall.Equals(methodCall) && result.Occurrence == calls);
-        }
 
-        public void SaveCapturedResult(CapturedResult result)
-        {
-            if (!CallCount.TryGetValue(result.MethodCall, out int calls))
+            var methodCallEvent = new MethodCallEvent
             {
-                calls = 0;
-            }
-            calls++;
-            CallCount[result.MethodCall] = calls;
-            result.Occurrence = calls;
-            Calls.Add(result);
+                Call = methodCall,
+                Time = Stopwatch.Elapsed,
+                Occurrence = calls,
+            };
+
+            return methodCallEvent;
         }
     }
 }
